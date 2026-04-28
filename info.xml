@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
-<extension key="com.joineryhq.fpptaregperm" type="module">
-  <file>fpptaregperm</file>
-  <name>com.joineryhq.fpptaregperm</name>
+<extension key="com.joineryhq.fpptaregdeny" type="module">
+  <file>fpptaregdeny</file>
+  <name>com.joineryhq.fpptaregdeny</name>
   <description>FIXME</description>
   <license>GPL-3.0</license>
   <authors>
@@ -42,9 +42,9 @@
     <psr4 prefix="Civi\" path="Civi"/>
   </classloader>
   <civix>
-    <namespace>CRM/Fpptaregperm</namespace>
+    <namespace>CRM/Fpptaregdeny</namespace>
     <format>25.10.2</format>
-    <angularModule>crmFpptaregperm</angularModule>
+    <angularModule>crmFpptaregdeny</angularModule>
   </civix>
   <mixins>
     <mixin>mgd-php@2.0.0</mixin>

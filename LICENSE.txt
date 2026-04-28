@@ -1,4 +1,4 @@
-Package: com.joineryhq.fpptaregperm
+Package: com.joineryhq.fpptaregdeny
 Copyright (C) 2026, Allen Shaw <allen@JoineryHQ.com>
 Licensed under GNU General Public License v3.0 only (below).
 

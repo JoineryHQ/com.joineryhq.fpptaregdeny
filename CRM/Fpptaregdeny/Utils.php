@@ -1,8 +1,8 @@
 <?php
 
-use CRM_Fpptaregperm_ExtensionUtil as E;
+use CRM_Fpptaregdeny_ExtensionUtil as E;
 
-class CRM_Fpptaregperm_Utils {
+class CRM_Fpptaregdeny_Utils {
   /**
    * Boolean test -- is the user blocked from registering for any events?
    * Reference requirements doc: https://docs.google.com/document/d/1_448rUywsYTF072paQOHBICD9MaWXvciDZYEpHYzUDo/edit?usp=sharing

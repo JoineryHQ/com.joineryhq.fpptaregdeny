@@ -8,6 +8,28 @@ require_once 'fpptaregdeny.civix.php';
 use CRM_Fpptaregdeny_ExtensionUtil as E;
 
 
+/**
+ * Implements hook_civicrm_alterContent().
+ *
+ * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_alterContent/
+ */
+function fpptaregdeny_civicrm_alterContent(&$content, $context, $tplName, &$object) {
+  $objName = $object->getVar('_name');
+  if ($objName == 'CRM_Event_Page_Tab') {
+    // Inject an action button to view user/contact's 'fpptaregdeny' access levels.
+    // SEE ALSO: FpptaregdenyParticipantLinksProvider, which adds this link in 
+    // api4.partipant.getLinks contexts (e.g. searchKit, as in civicrm_admin_ui)
+    $tpl = CRM_Core_Smarty::singleton();
+    $tpl->assign('fpptaregdenyStatusUrl', '#fixme');
+    $content .= $tpl->fetch('CRM/Fpptaregdeny/snippet/CRM_Event_Page_Tab_actions.tpl');
+  }
+}
+
+/**
+ * Implements hook_civicrm_buildForm().
+ *
+ * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_buildForm/
+ */
 function fpptaregdeny_civicrm_buildForm($formName, &$form) {
   if ($formName == 'CRM_Event_Form_Registration_Register') {
     $errorKeys = [];

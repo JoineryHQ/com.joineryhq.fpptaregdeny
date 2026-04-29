@@ -8,23 +8,27 @@ require_once 'fpptaregdeny.civix.php';
 use CRM_Fpptaregdeny_ExtensionUtil as E;
 
 
-/**
- * Implements hook_civicrm_permission_check().
- *
- * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_permission_check/
- */
-function fpptaregdeny_civicrm_permission_check($permission, &$granted) {
-  if ($permission == 'register for events') {
-    $staticKey = 'isUserBlocked';
-    if (!isset(\Civi::$statics[__METHOD__][$staticKey])) {
-      \Civi::$statics[__METHOD__][$staticKey] = CRM_Fpptaregdeny_Utils::isUserBlocked();
-    }
-    if (\Civi::$statics[__METHOD__][$staticKey] === TRUE) {
-      // We do not grant this permission in any case. We only revoke it by certain criteria.
-      $granted = FALSE;
+function fpptaregdeny_civicrm_buildForm($formName, &$form) {
+  if ($formName == 'CRM_Event_Form_Registration_Register') {
+    $errorKeys = [];
+    if (CRM_Fpptaregdeny_Utils::isUserBlocked($errorKeys)) {
+      $errors = CRM_Fpptaregdeny_Utils::translateErrorKeys($errorKeys, CRM_Fpptaregdeny_Utils::MESSAGE_AUDIENCE_USER);
+      if (empty($errors)) {
+        $statusMessage = 'Access denied.';
+      }
+      else {
+        $statusMessage = "You're not able to register for events at this time, because:<ul>";
+        foreach ($errors as $error) {
+          $statusMessage .= "<li>$error</li>";
+        }
+        $statusMessage .= "</ul>";
+      }
+      CRM_Core_Session::setStatus($statusMessage);
+      CRM_Utils_System::redirect(CRM_Utils_System::url('civicrm/event/info', 'reset=1&id=' . $form->_eventId,FALSE, NULL, FALSE, TRUE ));
     }
   }
 }
+
 
 /**
  * Implements hook_civicrm_config().

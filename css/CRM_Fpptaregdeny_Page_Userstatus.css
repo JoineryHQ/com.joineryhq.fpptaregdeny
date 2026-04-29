@@ -1,0 +1,11 @@
+.fpptaregdeny-status {
+  font-size: 1.5em;
+}
+
+.fpptaregdeny-status-grant {
+  color: green;
+}
+
+.fpptaregdeny-status-deny {
+  color: red;
+}

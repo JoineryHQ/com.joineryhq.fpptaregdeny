@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<menu>
+  <item>
+    <path>civicrm/fpptaregdeny/userstatus</path>
+    <page_callback>CRM_Fpptaregdeny_Page_Userstatus</page_callback>
+    <title>Contact/User self-registration access</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
+</menu>

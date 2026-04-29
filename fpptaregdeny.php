@@ -20,7 +20,7 @@ function fpptaregdeny_civicrm_alterContent(&$content, $context, $tplName, &$obje
     // SEE ALSO: FpptaregdenyParticipantLinksProvider, which adds this link in 
     // api4.partipant.getLinks contexts (e.g. searchKit, as in civicrm_admin_ui)
     $tpl = CRM_Core_Smarty::singleton();
-    $tpl->assign('fpptaregdenyStatusUrl', '#fixme');
+    $tpl->assign('fpptaregdenyStatusUrl', CRM_Utils_System::url('civicrm/fpptaregdeny/userstatus', ['cid' => $object->getVar('_contactId')]));
     $content .= $tpl->fetch('CRM/Fpptaregdeny/snippet/CRM_Event_Page_Tab_actions.tpl');
   }
 }
@@ -32,19 +32,16 @@ function fpptaregdeny_civicrm_alterContent(&$content, $context, $tplName, &$obje
  */
 function fpptaregdeny_civicrm_buildForm($formName, &$form) {
   if ($formName == 'CRM_Event_Form_Registration_Register') {
-    $errorKeys = [];
-    if (CRM_Fpptaregdeny_Utils::isUserBlocked($errorKeys)) {
-      $errors = CRM_Fpptaregdeny_Utils::translateErrorKeys($errorKeys, CRM_Fpptaregdeny_Utils::MESSAGE_AUDIENCE_USER);
-      if (empty($errors)) {
-        $statusMessage = 'Access denied.';
+    $cid = CRM_Core_Session::getLoggedInContactID();
+    $accessChecker = new CRM_Fpptaregdeny_ContactAccessChecker($cid, 'user');
+    $accessChecker->doChecks();
+    if ($accessChecker->getDisallow()) {
+      $results = $accessChecker->getResults();
+      $statusMessage = "You're not able to register for events at this time, because:<ul>";
+      foreach ($results as $result) {
+        $statusMessage .= "<li>{$result['user']}</li>";        
       }
-      else {
-        $statusMessage = "You're not able to register for events at this time, because:<ul>";
-        foreach ($errors as $error) {
-          $statusMessage .= "<li>$error</li>";
-        }
-        $statusMessage .= "</ul>";
-      }
+      $statusMessage .= "</ul>";
       CRM_Core_Session::setStatus($statusMessage);
       CRM_Utils_System::redirect(CRM_Utils_System::url('civicrm/event/info', 'reset=1&id=' . $form->_eventId,FALSE, NULL, FALSE, TRUE ));
     }

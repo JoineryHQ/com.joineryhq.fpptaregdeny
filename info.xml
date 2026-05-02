@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <extension key="com.joineryhq.fpptaregdeny" type="module">
   <file>fpptaregdeny</file>
-  <name>com.joineryhq.fpptaregdeny</name>
-  <description>FIXME</description>
+  <name>FPPTA Event Registration Denial</name>
+  <description>Custom for FPPTA: Deny access to event regisration in certain cases, even when user has sufficient permission.</description>
   <license>GPL-3.0</license>
   <authors>
     <author>
@@ -19,7 +19,7 @@
   </urls>
   <releaseDate>2026-04-27</releaseDate>
   <version>1.0.0</version>
-  <develStage>alpha</develStage>
+  <develStage>stable</develStage>
   <compatibility mode="semver">
     <comments>Semantic versioning. For example, compatibility with "6.1" implies compatibility with "6.2".</comments>
     <ver>6.12</ver>
@@ -52,5 +52,6 @@
     <mixin>setting-php@1.0.0</mixin>
     <mixin>smarty@1.0.3</mixin>
     <mixin>menu-xml@1.0.0</mixin>
+    <mixin>setting-admin@1.0.1</mixin>
   </mixins>
 </extension>

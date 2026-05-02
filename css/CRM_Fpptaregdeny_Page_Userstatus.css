@@ -9,3 +9,7 @@
 .fpptaregdeny-status-deny {
   color: red;
 }
+
+.fpptaregdeny-status-null {
+  color: gray;
+}

@@ -34,8 +34,6 @@ class FpptaregdenyParticipantLinksProvider extends \Civi\Core\Service\AutoSubscr
    * @throws \CRM_Core_Exception
    */
   public static function alterParticipantLinksResult(RespondEvent $e): void {
-    $requestSignature = $e->getApiRequestSig();
-
     $request = $e->getApiRequest();
     if ($request['version'] == 4 && $request->getEntityName() === 'Participant' && is_a($request, '\Civi\Api4\Action\GetLinks')) {
       $links = (array) $e->getResponse();
@@ -46,9 +44,10 @@ class FpptaregdenyParticipantLinksProvider extends \Civi\Core\Service\AutoSubscr
           if ($request->getExpandMultiple()) {
             // Inject a link to view contact's Event Registration access levels.
             $fpptaregdenyStatusLink = [];
+            $fpptaregdenyStatusLink['target'] = 'crm-popup';
             $fpptaregdenyStatusLink['text'] = ts('User can register self?');
             $fpptaregdenyStatusLink['icon'] = 'fa-shield';
-            $fpptaregdenyStatusLink['path'] = "fixme/civicrm/contact/view/participant?reset=1&action=add&cid=$contactId&context=participant&mode=live";
+            $fpptaregdenyStatusLink['path'] = "civicrm/fpptaregdeny/userstatus?cid=$contactId";
             $links[] = $fpptaregdenyStatusLink;
           }
         }

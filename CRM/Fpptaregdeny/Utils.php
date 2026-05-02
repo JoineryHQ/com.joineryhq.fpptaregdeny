@@ -4,66 +4,6 @@ use CRM_Fpptaregdeny_ExtensionUtil as E;
 
 class CRM_Fpptaregdeny_Utils {
   
-  const MESSAGE_KEY_NO_ORGS = 1;
-  const MESSAGE_KEY_NO_VALID_ORG_MEMBERSHIPS = 2;
-  const MESSAGE_KEY_HAS_UNPAID_REGISTRATIONS = 3;
-  
-  const MESSAGE_AUDIENCE_USER = 1;
-  const MESSAGE_AUDIENCE_STAFF = 2;
-  
-  const MESSAGES = [
-    self::MESSAGE_AUDIENCE_USER => [
-      self::MESSAGE_KEY_NO_ORGS => "It appears you're not connected to any member organization.",
-      self::MESSAGE_KEY_NO_VALID_ORG_MEMBERSHIPS => "We couldn't find a valid membership among your related organizations.",
-      self::MESSAGE_KEY_HAS_UNPAID_REGISTRATIONS => "",
-    ],
-    self::MESSAGE_AUDIENCE_STAFF => [
-      self::MESSAGE_KEY_NO_ORGS => 'User has no permissioned relationships to any organization.',
-      self::MESSAGE_KEY_NO_VALID_ORG_MEMBERSHIPS => "None of user's related organizations have a valid membership.",
-      self::MESSAGE_KEY_HAS_UNPAID_REGISTRATIONS => "",
-    ],
-  ];
-  
-  static function translateErrorKeys($errorKeys, $audience) {
-    $ret = [];
-    foreach($errorKeys as $errorKey) {
-      $ret[] = self::MESSAGES[$audience][$errorKey];
-    }
-    return $ret;
-  }
-  
-  /**
-   * Boolean test -- is the user blocked from registering for any events?
-   * Reference requirements doc: https://docs.google.com/document/d/1_448rUywsYTF072paQOHBICD9MaWXvciDZYEpHYzUDo/edit?usp=sharing
-   */
-  static function isUserBlocked(&$errorKeys = []) {
-    // Return true if any disqualification is found, or finally return false.
-    
-    $userCid = CRM_Core_Session::getLoggedInContactID();
-    if (!$userCid) {
-      // We do not handle anonymous users (CMS permissions may of course revoke by permission configs).
-      // Therefore return NULL (i.e., we don't care).
-      return;
-    }
-    
-    // Does user have permissioned relationships to any organization?
-    $relatedOrgCids = self::getPermissionedOrganizations($userCid);
-    if (empty($relatedOrgCids)) {
-      $errorKeys[] = self::MESSAGE_KEY_NO_ORGS;
-      return TRUE;
-    }
-    
-    // Do any of the related orgs have a valid membership?
-    $memberOrgCids = self::filterContactIdsByValidMemberships($relatedOrgCids);
-    if (empty($memberOrgCids)) {
-      $errorKeys[] = self::MESSAGE_KEY_NO_VALID_ORG_MEMBERSHIPS;
-      return TRUE;
-    }
-    
-    // Among valid member organizations' are all lacking a Disqualifying Contribution?
-    
-  }
-  
   /**
    * Return list of permissioned organizations for a given contact.
    * Copied and modified from CRM_Contact_BAO_Relationship::getPermissionedContacts(), with
@@ -80,7 +20,7 @@ class CRM_Fpptaregdeny_Utils {
     $args = [1 => [$contactID, 'Integer']];
 
     $query = "
-      SELECT c.id as id
+      SELECT c.id as id, c.display_name
       FROM civicrm_relationship r, civicrm_contact c
       WHERE
         (
@@ -103,7 +43,8 @@ class CRM_Fpptaregdeny_Utils {
 
     $dao = CRM_Core_DAO::executeQuery($query, $args);
     $rows = $dao->fetchAll();
-    $ret = array_unique(CRM_Utils_Array::collect('id', $rows));
+    $keyedRows = CRM_Utils_Array::rekey($rows, 'id');
+    $ret = CRM_Utils_Array::collect('display_name', $keyedRows);
     return $ret;
   }  
   
@@ -113,6 +54,7 @@ class CRM_Fpptaregdeny_Utils {
       1, // Associate
       2, // Pension Board
     ];
+
     $memberships = \Civi\Api4\Membership::get()
       ->setCheckPermissions(FALSE)
       ->addWhere('membership_type_id', 'IN', $membershipTypeIds)
@@ -123,8 +65,98 @@ class CRM_Fpptaregdeny_Utils {
         ->setCheckPermissions(FALSE)
         ->addWhere('id', '=', '$status_id'),
       0)
+      ->addChain('contact', \Civi\Api4\Contact::get()
+        ->setCheckPermissions(FALSE)
+        ->addWhere('id', '=', '$contact_id'),
+      0)
       ->execute();  
-    $ret = CRM_Utils_Array::collect('contact_id', (array)$memberships);
+    foreach ($memberships as $membership) {
+      $ret[$membership['contact_id']] = $membership['contact']['display_name'];
+    }
+    return $ret;
+  }
+
+
+  public static function maybeSyncUserRoles($cid) {
+    static $doneCids = [];
+    if (in_array($cid, $doneCids)) {
+      $doneCids[] = $cid;
+      if (CIVICRM_UF === 'WordPress' && FPPTAROLESYNC_DIR) {
+        $pluginUtilFile = FPPTAROLESYNC_DIR .'/includes/class-util.php';
+        if (file_exists($pluginUtilFile)) {
+          require_once($pluginUtilFile);
+          $cidsToUpdate = [$cid];
+          FpptarolesyncUtil::updateRolesForCids($cidsToUpdate);
+        }
+      }
+    }
+  }  
+  
+  public static function buildEntitiesUnorderedList($entities, $entityType, bool $doLink) {
+    $ret = '<ul>';
+    foreach($entities as $entityId => $entityLabel) {
+      if ($doLink) {
+        switch ($entityType) {
+          case 'contact':
+            $url = CRM_Utils_System::url('civicrm/contact/view', "action=view&reset=1&cid={$entityId}");
+            break;
+          case 'contribution': 
+            $url = CRM_Utils_System::url('civicrm/contact/view/contribution', "action=view&reset=1&id={$entityId}");
+            break;
+        }
+        $ret .= "<li><a href=\"$url\">{$entityLabel}</a></li>";
+      }
+      else {
+        $ret .= "<li>{$entityLabel}</li>";
+      }
+    }
+    $ret .= '</ul>';
+    return $ret;
+  }
+  
+  public static function getContactDisqualifyingContributions(array $cids) {
+    $ret = [];
+    if (empty($cids)) {
+      // Someone has passed in a null value; we can't know enough, so return empty array.
+      return $ret;
+    }
+    $dqStatusIds = \Civi::settings()->get('fpptaregdeny_dq_statusids');
+    if (is_string($dqStatusIds)) {
+      $dqStatusIds = json_decode($dqStatusIds);
+    }
+    $limitDays = \Civi::settings()->get('fpptaregdeny_limit_days');
+    $limitDaysDate = date('Y-m-d', strtotime("$limitDays days ago"));
+    // Get all contributions matching our settings for 'fpptaregdeny_limit_days' and 'fpptaregdeny_dq_statusids',
+    // with enough data to print a reasonable status report.
+    $contributions = Civi\Api4\Contribution::get()
+      ->setCheckPermissions(FALSE)
+      ->addWhere('contact_id', 'IN', $cids)
+      ->addWhere('receive_date', '<', $limitDaysDate)
+      ->addWhere('contribution_status_id', 'IN', $dqStatusIds)
+      ->addSelect('id')
+      ->addSelect('contact_id')
+      ->addSelect('total_amount')
+      ->addSelect('receive_date')
+      ->addSelect('contribution_status_id')
+      ->addSelect('contribution_status_id:label')
+      ->addOrderBy('receive_date', 'ASC')
+      ->addChain('contact', \Civi\Api4\Contact::get()
+        ->setCheckPermissions(FALSE)
+        ->addWhere('id', '=', '$contact_id')
+        ->addSelect('id')
+        ->addSelect('display_name'),
+      0)
+      ->execute();
+    foreach ($contributions as $contribution) {
+      $ret[$contribution['id']] = [
+        'id' => $contribution['id'],
+        'contact_id' => $contribution['contact_id'],
+        'total_amount' => CRM_Utils_Money::format($contribution['total_amount']),
+        'receive_date' => CRM_Utils_Date::customFormat($contribution['receive_date'], "%Y-%m-%d"),
+        'contribution_status' => $contribution['contribution_status_id:label'],
+        'display_name' => $contribution['contact']['display_name'],
+      ];
+    }
     return $ret;
   }
 }

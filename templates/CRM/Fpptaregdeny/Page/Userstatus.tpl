@@ -2,6 +2,16 @@
 
 {if $disallow}
   <p class="status error">This contact cannot log in and perform event registrations. See below for disqualifying criteria.</p>
+  {if !$hasCmsUser}
+    <h4>User cannot log in.</h4>
+  {elseif !$userHasPerm}
+    <h4>User is blocked by CMS (does not have a role with "register for events" permission).</h4>
+  {else}
+    <h4>User might try to open event registration, but would be rejected with this message:</h4>
+    <div class="messages warning no-popup">
+      {$userStatusMessage}
+    </div>
+  {/if}
 {else}
   <p class="status success">This contact can perform event registrations when logged in.</p>
 {/if}
@@ -12,7 +22,7 @@
     <th>Assessment</th>
     <th>Can register?</th>
   </thead>
-  <tbody>    
+  <tbody>
   {foreach from=$results item=result}
     {capture assign="accessMarker"}
       {if $result.access === TRUE}

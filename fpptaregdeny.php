@@ -41,11 +41,7 @@ function fpptaregdeny_civicrm_buildForm($formName, &$form) {
       $accessChecker->doChecks();
       if ($accessChecker->getDisallow()) {
         $results = $accessChecker->getResults();
-        $statusMessage = "You're not able to register for events at this time, because:<ul>";
-        foreach ($results as $result) {
-          $statusMessage .= "<li>{$result['user']}</li>";
-        }
-        $statusMessage .= "</ul>";
+        $statusMessage = CRM_Fpptaregdeny_Utils::buildUserStatusMessage($results);
         CRM_Core_Session::setStatus($statusMessage, 'Access withheld.', 'crm-error');
         CRM_Utils_System::redirect(CRM_Utils_System::url('civicrm/event/info', 'reset=1&id=' . $form->_eventId, FALSE, NULL, FALSE, TRUE));
       }

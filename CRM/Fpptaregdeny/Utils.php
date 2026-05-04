@@ -194,4 +194,22 @@ class CRM_Fpptaregdeny_Utils {
     return $ret;
   }
 
+  /**
+   * Construct user-facing explanation of access denial.
+   *
+   * @param array $results As provided by CRM_Fpptaregdeny_ContactAccessChecker::getResults()
+   * @return string Html-format status message.
+   */
+  public static function buildUserStatusMessage($results) {
+    $statusMessage = "You're not able to register for events at this time, because:<ul>";
+    foreach ($results as $result) {
+      if (empty($result['user'])) {
+        continue;
+      }
+      $statusMessage .= "<li>{$result['user']}</li>";
+    }
+    $statusMessage .= "</ul>";
+    return $statusMessage;
+  }
+
 }

@@ -78,8 +78,9 @@ class CRM_Fpptaregdeny_ContactAccessChecker {
    *
    * @return Array key=int; value=[see self::addResult]
    */
-  public function getResults() {
-    switch ($this->context) {
+  public function getResults($context = NULL) {
+    $context = $context ?? $this->context;
+    switch ($context) {
       case 'admin':
         // For admin: return all results.
         return $this->results;
@@ -135,12 +136,12 @@ class CRM_Fpptaregdeny_ContactAccessChecker {
   private function checkHasCmsUser() {
     $adminDescription = 'Contact has a user account?';
     if (empty($this->userId)) {
-      $this->addResult(__FUNCTION__, FALSE, FALSE, 'You have no user account', $adminDescription, 'No user account found.');
+      $this->addResult(__FUNCTION__, FALSE, FALSE, '', $adminDescription, 'No user account found.');
     }
     else {
       $userRecordUrl = CRM_Core_Config::singleton()->userSystem->getUserRecordUrl($this->cid);
       $adminMessage = "User account: <a href=\"{$userRecordUrl}\">{$this->userId}</a>";
-      $this->addResult(__FUNCTION__, TRUE, TRUE, 'You have a user account', $adminDescription, $adminMessage);
+      $this->addResult(__FUNCTION__, TRUE, TRUE, '', $adminDescription, $adminMessage);
     }
   }
 
@@ -153,10 +154,10 @@ class CRM_Fpptaregdeny_ContactAccessChecker {
     // If possible, run WP "fpptarolesync" plugin functions to update user roles.
     CRM_Fpptaregdeny_Utils::maybeSyncUserRoles($this->cid);
     if (CRM_Core_Permission::check('register for events', $this->cid)) {
-      $this->addResult(__FUNCTION__, TRUE, TRUE, 'You do have permission to register for events.', $adminDescription, 'User has this permission.');
+      $this->addResult(__FUNCTION__, TRUE, TRUE, '', $adminDescription, 'User has this permission.');
     }
     else {
-      $this->addResult(__FUNCTION__, FALSE, FALSE, 'You do not have permission to register for events.', $adminDescription, 'User does not hvae this permission.');
+      $this->addResult(__FUNCTION__, FALSE, FALSE, '', $adminDescription, 'User does not hvae this permission.');
     }
   }
 
@@ -274,7 +275,7 @@ class CRM_Fpptaregdeny_ContactAccessChecker {
           break;
 
         case 'admin|organization':
-          $label = "{$contribution['receive_date']}: {$contribution['total_amount']}, status: {$contribution['contribution_status']}, charged to {$contribution['display_name']}";
+          $label = "{$contribution['receive_date']}: {$contribution['total_amount']}, status: {$contribution['contribution_status']}, charged to: {$contribution['display_name']}";
           break;
 
         case 'user|individual':
@@ -282,7 +283,7 @@ class CRM_Fpptaregdeny_ContactAccessChecker {
           break;
 
         case 'user|organization':
-          $label = "{$contribution['receive_date']}: charged to {$contribution['display_name']}";
+          $label = "{$contribution['receive_date']}: charged to: {$contribution['display_name']}";
           break;
 
       }

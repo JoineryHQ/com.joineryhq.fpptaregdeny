@@ -3,7 +3,7 @@
 use CRM_Fpptaregdeny_ExtensionUtil as E;
 
 class CRM_Fpptaregdeny_Utils {
-  
+
   /**
    * Return list of permissioned organizations for a given contact.
    * Copied and modified from CRM_Contact_BAO_Relationship::getPermissionedContacts(), with
@@ -46,13 +46,22 @@ class CRM_Fpptaregdeny_Utils {
     $keyedRows = CRM_Utils_Array::rekey($rows, 'id');
     $ret = CRM_Utils_Array::collect('display_name', $keyedRows);
     return $ret;
-  }  
-  
+  }
+
+  /**
+   * For a given set of contactIds, return those that have a Valid Organizational Membership.
+   *
+   * @param Array $cids (integers)
+   *
+   * @return Array key=cid; value=display_name
+   */
   public static function filterContactIdsByValidMemberships($cids) {
     $ret = [];
     $membershipTypeIds = [
-      1, // Associate
-      2, // Pension Board
+      // Associate:
+      1,
+      // Pension Board:
+      2,
     ];
 
     $memberships = \Civi\Api4\Membership::get()
@@ -69,40 +78,58 @@ class CRM_Fpptaregdeny_Utils {
         ->setCheckPermissions(FALSE)
         ->addWhere('id', '=', '$contact_id'),
       0)
-      ->execute();  
+      ->execute();
     foreach ($memberships as $membership) {
       $ret[$membership['contact_id']] = $membership['contact']['display_name'];
     }
     return $ret;
   }
 
-
+  /**
+   * For a given contactId, fire off the FpptarolesyncUtil::updateRolesForCids()
+   * function, if it exists (i.e., if wp plugin fpptarolesync is active).
+   *
+   * @staticvar array $doneCids Caching to avoid repeat processing on any contacts.
+   *
+   * @param Int $cid
+   */
   public static function maybeSyncUserRoles($cid) {
     static $doneCids = [];
     if (in_array($cid, $doneCids)) {
       $doneCids[] = $cid;
       if (CIVICRM_UF === 'WordPress' && FPPTAROLESYNC_DIR) {
-        $pluginUtilFile = FPPTAROLESYNC_DIR .'/includes/class-util.php';
+        $pluginUtilFile = FPPTAROLESYNC_DIR . '/includes/class-util.php';
         if (file_exists($pluginUtilFile)) {
-          require_once($pluginUtilFile);
+          require_once $pluginUtilFile;
           $cidsToUpdate = [$cid];
           FpptarolesyncUtil::updateRolesForCids($cidsToUpdate);
         }
       }
     }
-  }  
-  
+  }
+
+  /**
+   * Create an html unordered list from an array of entity information.
+   *
+   * @param Array $entities key=entityId; value=text_label
+   * @param String $entityType contact|contribution
+   * @param Bool $doLink Create label as a link to the entity?
+   *
+   * @return String Full <ul> html content.
+   */
   public static function buildEntitiesUnorderedList($entities, $entityType, bool $doLink) {
     $ret = '<ul>';
-    foreach($entities as $entityId => $entityLabel) {
+    foreach ($entities as $entityId => $entityLabel) {
       if ($doLink) {
         switch ($entityType) {
           case 'contact':
             $url = CRM_Utils_System::url('civicrm/contact/view', "action=view&reset=1&cid={$entityId}");
             break;
-          case 'contribution': 
+
+          case 'contribution':
             $url = CRM_Utils_System::url('civicrm/contact/view/contribution', "action=view&reset=1&id={$entityId}");
             break;
+
         }
         $ret .= "<li><a href=\"$url\">{$entityLabel}</a></li>";
       }
@@ -113,7 +140,14 @@ class CRM_Fpptaregdeny_Utils {
     $ret .= '</ul>';
     return $ret;
   }
-  
+
+  /**
+   * For the given contactIds, get a list of Disqualifying Contributions by those contacts.
+   *
+   * @param Array $cids
+   *
+   * @return Array key=contribution_id; value=[array of contribution properties]
+   */
   public static function getContactDisqualifyingContributions(array $cids) {
     $ret = [];
     if (empty($cids)) {
@@ -159,4 +193,5 @@ class CRM_Fpptaregdeny_Utils {
     }
     return $ret;
   }
+
 }

@@ -8,12 +8,12 @@ return [
     'type' => 'Boolean',
     'title' => E::ts('Enforce access limitations?'),
     'description' => E::ts('If this is disabled, user blocking is not enforced, but staff can still examine status.'),
-    'default' => false,
+    'default' => FALSE,
     'html_type' => 'checkbox',
     'is_domain' => 1,
     'is_contact' => 0,
     'settings_pages' => ['fpptaregdeny' => ['weight' => 1]],
-  ],  
+  ],
   'fpptaregdeny_limit_days' => [
     'name' => 'fpptaregdeny_limit_days',
     'type' => 'Int',
@@ -24,7 +24,7 @@ return [
     'is_domain' => 1,
     'is_contact' => 0,
     'settings_pages' => ['fpptaregdeny' => ['weight' => 10]],
-  ],  
+  ],
   'fpptaregdeny_dq_statusids' => [
     'name' => 'fpptaregdeny_dq_statusids',
     'type' => 'String',

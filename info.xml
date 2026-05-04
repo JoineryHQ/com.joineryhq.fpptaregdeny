@@ -12,9 +12,9 @@
     </author>
   </authors>
   <urls>
-    <url desc="Main Extension Page">https://FIXME</url>
-    <url desc="Documentation">https://FIXME</url>
-    <url desc="Support">https://FIXME</url>
+    <url desc="Main Extension Page">https://github.com/JoineryHQ/com.joineryhq.fpptaregdeny</url>
+    <url desc="Documentation">https://github.com/JoineryHQ/com.joineryhq.fpptaregdeny</url>
+    <url desc="Support">https://github.com/JoineryHQ/com.joineryhq.fpptaregdeny/issues</url>
     <url desc="Licensing">https://www.gnu.org/licenses/gpl-3.0.html</url>
   </urls>
   <releaseDate>2026-04-27</releaseDate>

@@ -2,12 +2,46 @@
 
 class CRM_Fpptaregdeny_ContactAccessChecker {
 
+  /**
+   * ID of contact we're checking.
+   * @var int
+   */
   private $cid;
-  private $context; // user | admin
+
+  /**
+   * In what context are we making this check? user|admin
+   * @var string
+   */
+  private $context;
+
+  /**
+   *  UF user ID for this contact.
+   * @var int
+   */
   private $userId;
+
+  /**
+   * Results of all checks we've performed.
+   * @var array
+   */
   private $results = [];
-  private $disallow = FALSE; // boolean; by default, we don't deny access.
+
+  /**
+   * Deny access based on $results? (By default, we don't deny access.)
+   * @var bool
+   */
+  private $disallow = FALSE;
+
+  /**
+   * Contact IDs of organizations to which this contact has a permissioned relationship.
+   * @var array
+   */
   private $relatedOrgCids = [];
+
+  /**
+   * Among this contact's related orgs, those that have Valid Organizational Membership.
+   * @var array
+   */
   private $validMemberOrgCids = [];
 
   public function __construct($cid, $context) {
@@ -16,10 +50,13 @@ class CRM_Fpptaregdeny_ContactAccessChecker {
     $this->userId = CRM_Core_BAO_UFMatch::getUFId($cid);
   }
 
+  /**
+   * Perform checks relevant to context.
+   */
   public function doChecks() {
     switch ($this->context) {
       case 'admin':
-        $this->checkHasWpUser();
+        $this->checkHasCmsUser();
         $this->checkUserHasPerm();
         // no `break`: 'admin' will also run all 'user' checks.
       case 'user':
@@ -36,11 +73,17 @@ class CRM_Fpptaregdeny_ContactAccessChecker {
     }
   }
 
+  /**
+   * Return an array of results based on context.
+   *
+   * @return Array key=int; value=[see self::addResult]
+   */
   public function getResults() {
     switch ($this->context) {
       case 'admin':
         // For admin: return all results.
         return $this->results;
+
       case 'user':
         // For user: return only access-deying results.
         $ret = [];
@@ -53,10 +96,28 @@ class CRM_Fpptaregdeny_ContactAccessChecker {
     }
   }
 
+  /**
+   * Return boolean indicating whether to disallow event registration.
+   *
+   * @return Boolean
+   */
   public function getDisallow() {
     return $this->disallow;
   }
 
+  /**
+   * Add a check result to $this->results.
+   *
+   * @param string $name Name of the result (typically, name of the method
+   *   representing the performed check)
+   * @param bool $checkStatus Did the check evaluate to 'yes'? (Some check names
+   *   phrased in a way that 'yes' would mean 'deny'; others are phrased conversely.)
+   * @param bool $accessStatus Did the check result in allowing access? (Depending
+   *   on the check, this may be inverse of $checkStatus.)
+   * @param string $userMessage User-facing explanation of $accessStatus determination.
+   * @param string $adminDescription Admin-facing description of the check.
+   * @param string $adminMessage Admin-facing explanation of $accessStatus determination.
+   */
   private function addResult($name, $checkStatus, $accessStatus, $userMessage, $adminDescription, $adminMessage) {
     $result = [
       'check' => $checkStatus,
@@ -68,8 +129,10 @@ class CRM_Fpptaregdeny_ContactAccessChecker {
     $this->results[$name] = $result;
   }
 
-  // contact has a wp user?
-  private function checkHasWpUser() {
+  /**
+   * Check: does this contact have a CMS user?
+   */
+  private function checkHasCmsUser() {
     $adminDescription = 'Contact has a user account?';
     if (empty($this->userId)) {
       $this->addResult(__FUNCTION__, FALSE, FALSE, 'You have no user account', $adminDescription, 'No user account found.');
@@ -81,7 +144,10 @@ class CRM_Fpptaregdeny_ContactAccessChecker {
     }
   }
 
-  // user has 'register for events' permission?
+  /**
+   * Check: Does this contact's user have the 'register for events' permission?
+   *
+   */
   private function checkUserHasPerm() {
     $adminDescription = 'Contact/user has permission to register for events?';
     // If possible, run WP "fpptarolesync" plugin functions to update user roles.
@@ -94,7 +160,9 @@ class CRM_Fpptaregdeny_ContactAccessChecker {
     }
   }
 
-  // contact has Disqualifying Contributions?
+  /**
+   * Check: contact has Disqualifying Contributions of their own?
+   */
   private function checkHasOwnDisqualifyingContributions() {
     $adminDescription = 'Contact has disqualifying contributions?';
     $disqualifyingContributions = CRM_Fpptaregdeny_Utils::getContactDisqualifyingContributions([$this->cid]);
@@ -105,11 +173,13 @@ class CRM_Fpptaregdeny_ContactAccessChecker {
       $preppedContributionsList = $this->prepContributionsList($disqualifyingContributions, 'individual');
       $contributionListAdmin = CRM_Fpptaregdeny_Utils::buildEntitiesUnorderedList($preppedContributionsList, 'contribution', TRUE);
       $contributionListUser = CRM_Fpptaregdeny_Utils::buildEntitiesUnorderedList($preppedContributionsList, 'contribution', FALSE);
-      $this->addResult(__FUNCTION__, TRUE, FALSE, 'You have some outstanding payments: '. $contributionListUser, $adminDescription, 'Disqualifying contributions found:'. $contributionListAdmin);
+      $this->addResult(__FUNCTION__, TRUE, FALSE, 'You have some outstanding payments: ' . $contributionListUser, $adminDescription, 'Disqualifying contributions found:' . $contributionListAdmin);
     }
   }
 
-  // contact has permissioned relationship to any organizations?
+  /**
+   * Check: contact has permissioned relationship to any organizations?
+   */
   private function checkHasRelatedOrgs() {
     $adminDescription = 'Contact has permissioned relationships to some organizations?';
     $relatedOrgs = CRM_Fpptaregdeny_Utils::getPermissionedOrganizations($this->cid);
@@ -119,20 +189,22 @@ class CRM_Fpptaregdeny_ContactAccessChecker {
     }
     else {
       $orgListAdmin = CRM_Fpptaregdeny_Utils::buildEntitiesUnorderedList($relatedOrgs, 'contact', TRUE);
-      $this->addResult(__FUNCTION__, TRUE, TRUE, 'You have some permissioned relationships to organizations.', $adminDescription, 'Found permissioned relationships to these organizations: '.  $orgListAdmin);
+      $this->addResult(__FUNCTION__, TRUE, TRUE, 'You have some permissioned relationships to organizations.', $adminDescription, 'Found permissioned relationships to these organizations: ' . $orgListAdmin);
     }
   }
 
-  // at least one of contact's organizations has a Valid Organizational Membership?
+  /**
+   * Check: at least one of contact's organizations has a Valid Organizational Membership?
+   */
   private function checkHasRelatedValidMembership() {
     $adminDescription = "At least one of contact's organizations has a Valid Organizational Membership?";
-    
+
     if (empty($this->relatedOrgCids)) {
-      $notPerformedMessage = 'This check was not performed permissioned relationships to organizations were found.';
+      $notPerformedMessage = 'This check was not performed because no permissioned relationships to organizations were found.';
       $this->addResult(__FUNCTION__, NULL, NULL, $notPerformedMessage, $adminDescription, $notPerformedMessage);
       return;
     }
-    
+
     $validMemberOrgs = CRM_Fpptaregdeny_Utils::filterContactIdsByValidMemberships($this->relatedOrgCids);
     $this->validMemberOrgCids = array_keys($validMemberOrgs);
     if (empty($validMemberOrgs)) {
@@ -140,21 +212,23 @@ class CRM_Fpptaregdeny_ContactAccessChecker {
     }
     else {
       $orgListAdmin = CRM_Fpptaregdeny_Utils::buildEntitiesUnorderedList($validMemberOrgs, 'contact', TRUE);
-      $this->addResult(__FUNCTION__, TRUE, TRUE, 'We found valid memberships among your related organizations.', $adminDescription, 'Found these related organizations with valid memberships: '.  $orgListAdmin);
+      $this->addResult(__FUNCTION__, TRUE, TRUE, 'We found valid memberships among your related organizations.', $adminDescription, 'Found these related organizations with valid memberships: ' . $orgListAdmin);
     }
   }
 
-  // orgs with valid memberships have Disqualifying Contributions?
+  /**
+   * Check: orgs with valid memberships have Disqualifying Contributions?
+   */
   private function checkHasRelatedMemberOrgsHavingNoDisqualifyingContributions() {
     $checkStatus = FALSE;
     $adminDescription = "Contact has related member organizations without disqualifying contributions?";
-    
+
     if (empty($this->validMemberOrgCids)) {
       $notPerformedMessage = 'This check was not performed because no related member organizations were found.';
       $this->addResult(__FUNCTION__, NULL, NULL, $notPerformedMessage, $adminDescription, $notPerformedMessage);
       return;
     }
-    
+
     $disqualifyingContributions = CRM_Fpptaregdeny_Utils::getContactDisqualifyingContributions($this->validMemberOrgCids);
     if (empty($disqualifyingContributions)) {
       // contact has related member orgs, and none of those have disqualifying contributions, so this check passes.
@@ -174,7 +248,7 @@ class CRM_Fpptaregdeny_ContactAccessChecker {
         $preppedContributionsList = $this->prepContributionsList($disqualifyingContributions, 'organization');
         $contributionListAdmin = CRM_Fpptaregdeny_Utils::buildEntitiesUnorderedList($preppedContributionsList, 'contribution', TRUE);
         $contributionListUser = CRM_Fpptaregdeny_Utils::buildEntitiesUnorderedList($preppedContributionsList, 'contribution', FALSE);
-        $this->addResult(__FUNCTION__, FALSE, FALSE, 'Your related organizations have outstanding payments: '. $contributionListUser, $adminDescription, 'Found disqualifying contributions for all related member organizations:'. $contributionListAdmin);
+        $this->addResult(__FUNCTION__, FALSE, FALSE, 'Your related organizations have outstanding payments: ' . $contributionListUser, $adminDescription, 'Found disqualifying contributions for all related member organizations:' . $contributionListAdmin);
       }
       else {
         $this->addResult(__FUNCTION__, TRUE, TRUE, 'Some of your related organizations do not have outstanding payments.', $adminDescription, 'Some related member organizations have no disqualifying contributions.');
@@ -182,26 +256,39 @@ class CRM_Fpptaregdeny_ContactAccessChecker {
     }
   }
 
+  /**
+   * For a given set of contributions, prep an array suitable for passing to
+   * CRM_Fpptaregdeny_Utils::buildEntitiesUnorderedList().
+   *
+   * @param array $contributions As obtained from CRM_Fpptaregdeny_Utils::getContactDisqualifyingContributions()
+   * @param string $checkType 'organization' or 'individual'
+   * @return array suitable for passing to CRM_Fpptaregdeny_Utils::buildEntitiesUnorderedList()
+   */
   private function prepContributionsList(array $contributions, $checkType) {
     $ret = [];
     $messageType = "{$this->context}|{$checkType}";
-    foreach ($contributions as $contribution) {      
+    foreach ($contributions as $contribution) {
       switch ($messageType) {
         case 'admin|individual':
           $label = "{$contribution['receive_date']}: {$contribution['total_amount']}, status: {$contribution['contribution_status']}";
           break;
+
         case 'admin|organization':
           $label = "{$contribution['receive_date']}: {$contribution['total_amount']}, status: {$contribution['contribution_status']}, charged to {$contribution['display_name']}";
           break;
+
         case 'user|individual':
           $label = "{$contribution['receive_date']}: {$contribution['total_amount']}, status: {$contribution['contribution_status']}";
           break;
+
         case 'user|organization':
           $label = "{$contribution['receive_date']}: charged to {$contribution['display_name']}";
           break;
+
       }
       $ret[$contribution['id']] = $label;
     }
     return $ret;
   }
+
 }

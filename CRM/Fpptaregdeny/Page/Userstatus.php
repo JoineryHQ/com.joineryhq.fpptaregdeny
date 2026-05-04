@@ -12,17 +12,17 @@ class CRM_Fpptaregdeny_Page_Userstatus extends CRM_Core_Page {
     $accessChecker->doChecks();
     $this->assign('results', $accessChecker->getResults());
     $this->assign('disallow', $accessChecker->getDisallow());
-    
+
     $contact = Civi\Api4\Contact::get()
       ->addWhere('id', '=', $cid)
       ->execute()
       ->first();
     $this->assign('displayName', $contact['display_name']);
     $this->assign('cid', $cid);
-    
+
     CRM_Core_Resources::singleton()->addStyleFile(E::LONG_NAME, 'css/CRM_Fpptaregdeny_Page_Userstatus.css');
     parent::run();
-    
+
   }
 
 }

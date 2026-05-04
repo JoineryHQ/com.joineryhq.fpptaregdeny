@@ -17,12 +17,16 @@ function fpptaregdeny_civicrm_alterContent(&$content, $context, $tplName, &$obje
   if ($context == 'page' && $objName == 'CRM_Event_Page_Tab') {
     $action = $object->getVar('_action');
     if ($action == CRM_Core_Action::BROWSE) {
-      // Inject an action button to view user/contact's 'fpptaregdeny' access levels.
-      // SEE ALSO: FpptaregdenyParticipantLinksProvider, which adds this link in
-      // api4.partipant.getLinks contexts (e.g. searchKit, as in civicrm_admin_ui)
-      $tpl = CRM_Core_Smarty::singleton();
-      $tpl->assign('fpptaregdenyStatusUrl', CRM_Utils_System::url('civicrm/fpptaregdeny/userstatus', ['cid' => $object->getVar('_contactId')]));
-      $content .= $tpl->fetch('CRM/Fpptaregdeny/snippet/CRM_Event_Page_Tab_actions.tpl');
+      $contactId = $object->getVar('_contactId');
+      $contactType = \CRM_Contact_BAO_Contact::getContactType($contactId);
+      if (strtolower($contactType) == 'individual') {
+        // Inject an action button to view user/contact's 'fpptaregdeny' access levels.
+        // SEE ALSO: FpptaregdenyParticipantLinksProvider, which adds this link in
+        // api4.partipant.getLinks contexts (e.g. searchKit, as in civicrm_admin_ui)
+        $tpl = CRM_Core_Smarty::singleton();
+        $tpl->assign('fpptaregdenyStatusUrl', CRM_Utils_System::url('civicrm/fpptaregdeny/userstatus', ['cid' => $contactId]));
+        $content .= $tpl->fetch('CRM/Fpptaregdeny/snippet/CRM_Event_Page_Tab_actions.tpl');
+      }
     }
   }
 }

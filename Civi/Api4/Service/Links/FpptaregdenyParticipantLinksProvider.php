@@ -43,14 +43,17 @@ class FpptaregdenyParticipantLinksProvider extends \Civi\Core\Service\AutoSubscr
       if (isset($addLinkIndex)) {
         $contactId = $request->getValue('contact_id');
         if ($contactId) {
-          if ($request->getExpandMultiple()) {
-            // Inject a link to view contact's Event Registration access levels.
-            $fpptaregdenyStatusLink = [];
-            $fpptaregdenyStatusLink['target'] = 'crm-popup';
-            $fpptaregdenyStatusLink['text'] = ts('User can register self?');
-            $fpptaregdenyStatusLink['icon'] = 'fa-shield';
-            $fpptaregdenyStatusLink['path'] = "civicrm/fpptaregdeny/userstatus?cid=$contactId";
-            $links[] = $fpptaregdenyStatusLink;
+          $contactType = \CRM_Contact_BAO_Contact::getContactType($contactId);
+          if (strtolower($contactType) == 'individual') {
+            if ($request->getExpandMultiple()) {
+              // Inject a link to view contact's Event Registration access levels.
+              $fpptaregdenyStatusLink = [];
+              $fpptaregdenyStatusLink['target'] = 'crm-popup';
+              $fpptaregdenyStatusLink['text'] = ts('User can register self?');
+              $fpptaregdenyStatusLink['icon'] = 'fa-shield';
+              $fpptaregdenyStatusLink['path'] = "civicrm/fpptaregdeny/userstatus?cid=$contactId";
+              $links[] = $fpptaregdenyStatusLink;
+            }
           }
         }
       }
